@@ -1,4 +1,9 @@
-"""Источник: Курсы."""
+"""Источник: Курсы.
+
+Данные пока лежат здесь же: живого API курсов нет. Когда появится —
+источник переедет на клиента из app/clients (образец обвязки —
+app/clients/courses.py::CoursesClient).
+"""
 
 from app.enrichment.base import EntityNotFound
 from app.enrichment.registry import register

@@ -4,6 +4,7 @@ from app.enrichment import (
     EnrichmentError,
     EnrichmentSource,
     EntityNotFound,
+    _source_module_names,
     get_source,
     register,
     source_names,
@@ -38,6 +39,19 @@ def test_courses_source_matches_protocol():
 def test_courses_registered_on_import():
     assert "courses" in source_names()
     assert isinstance(get_source("courses"), CoursesSource)
+
+
+def test_every_source_module_registers_a_source():
+    """Сторож автоимпорта: модуль в пакете есть, а register() внизу забыт.
+
+    Автоимпорт сам по себе этого не ловит — модуль импортируется, но реестр
+    остаётся пустым, и источник молча отсутствует.
+    """
+    registering_modules = {
+        type(get_source(name)).__module__.rsplit(".", 1)[-1] for name in source_names()
+    }
+    missing = _source_module_names() - registering_modules
+    assert not missing, f"модули без зарегистрированного источника: {missing}"
 
 
 def test_get_unknown_source_returns_none():

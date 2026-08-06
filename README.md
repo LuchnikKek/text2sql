@@ -27,7 +27,46 @@ uv run pytest
 | POST | /api/v1/history | История чата по `chat_id` (`message_id` + `message` + `type`) |
 | POST | /api/v1/feedback | Оценка ответа агента (1–5) по `message_id` |
 | GET | /api/v1/feedback | Все оценённые ответы чата (`message_id` + `rating`) |
+| GET | /api/v1/enrich/{source}/{entity_id} | Данные сущности из источника обогащения |
 | GET | /health | Health-check (без авторизации) |
+
+## Обогащение: источники и клиенты
+
+Два слоя с разной ответственностью:
+
+- **Клиент** (`app/clients`) — тонкая обёртка над одним внешним API: base URL,
+  таймаут, разбор ответа. Ошибки поднимает свои: `RestClientNotFound` (404
+  от внешней системы) и `RestClientError` (всё остальное). Про обогащение
+  клиент не знает — его можно использовать где угодно ещё.
+- **Источник** (`app/enrichment`) — собирает ответ нашего контракта, дёргая
+  один или несколько клиентов, и переводит их ошибки в `EntityNotFound`
+  (→ 404) и `EnrichmentError` (→ 502).
+
+Модули из `app/enrichment` импортируются автоматически, поэтому новый
+источник = новый файл с `register(...)` внизу; ручной список импортов не
+ведётся. Плата за это: модуль источника не должен импортировать сам пакет
+`app.enrichment` (только `.base` / `.registry`), а вспомогательные модули
+внутри пакета называются с префиксом `_`. Забытый `register(...)` ловит
+тест `test_every_source_module_registers_a_source`.
+
+Новый клиент = подкласс `RestClient` + подкласс `RestClientSettings`
+с `env_prefix` и дефолтами `url` / `timeout`. Настройки клиента живут рядом
+с ним, а не в `app/config.py`.
+
+| Источник | Данные | Пример `entity_id` |
+|---|---|---|
+| `courses` | мок-словарь в модуле источника | `c-101`, `c-202` |
+
+Живого API курсов нет, поэтому `courses` пока отдаёт данные из словаря
+в `app/enrichment/courses.py`, а не через клиента. Слой клиентов готов и
+покрыт тестами; эталонная обвязка — `app/clients/courses.py::CoursesClient`
+(настройки `COURSES_CLIENT_URL`, `COURSES_CLIENT_TIMEOUT`). Как только
+появится адрес живого API, источник переезжает на клиента: ловит
+`RestClientNotFound` / `RestClientError` и переводит в `EntityNotFound` /
+`EnrichmentError`. В тестах внешний API подменяется `httpx.MockTransport`.
+
+`httpx.AsyncClient` внутри клиента создаётся лениво (при первом запросе),
+а закрывается в lifespan приложения через `app.clients.aclose_all()`.
 
 ## Авторизация
 

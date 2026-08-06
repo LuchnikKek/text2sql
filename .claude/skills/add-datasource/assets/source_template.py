@@ -37,22 +37,30 @@ class TemplateSource:
         # Отдаём копию: вызывающий не должен мутировать наши данные.
         return dict(item)
 
-    # --- Вариант B: реальная внешняя система ------------------------------
-    # Удалить вариант A и раскомментировать этот.
+    # --- Вариант B: данные из внешнего API ---------------------------------
+    # Удалить вариант A вместе с _ITEMS и раскомментировать этот. HTTP тут
+    # не пишется руками: сначала заводится клиент в app/clients — из
+    # соседнего шаблона assets/client.py (живой ориентир —
+    # app/clients/courses.py), источник только переводит его ошибки в свои.
+    #
+    # def __init__(self, client: TemplateClient | None = None) -> None:
+    #     # Клиент параметром — чтобы тесты подсовывали httpx.MockTransport.
+    #     self._client = client or TemplateClient()
     #
     # async def fetch(self, entity_id: str) -> dict:
     #     try:
-    #         response = await self._client.get(f"/items/{entity_id}")
-    #     except Exception as exc:  # сеть/таймаут — внешняя система виновата
-    #         raise EnrichmentError(f"TODO upstream failed: {exc}") from exc
-    #     if response.status_code == 404:
-    #         raise EntityNotFound(f"TODO entity not found: {entity_id}")
-    #     if response.status_code >= 400:
-    #         raise EnrichmentError(f"TODO upstream returned {response.status_code}")
-    #     return response.json()
+    #         return await self._client.get_item(entity_id)
+    #     except RestClientNotFound as exc:
+    #         raise EntityNotFound(f"TODO entity not found: {entity_id}") from exc
+    #     except RestClientError as exc:
+    #         raise EnrichmentError(str(exc)) from exc
+    #
+    # Источнику можно вызывать несколько клиентов и склеивать их ответы —
+    # тогда решить, что делать, если один из них ответил 404: это
+    # EntityNotFound или частичные данные.
 
 
 # Регистрация на импорте модуля — единственный способ попасть в реестр.
-# Сам импорт нужно добавить в app/enrichment/__init__.py, иначе модуль
-# никто не импортирует и источника в реестре не будет.
+# Сам импорт делает автоимпорт пакета (app/enrichment/__init__.py),
+# добавлять его руками не нужно; забытый register() ловит тест-сторож.
 register(TemplateSource())

@@ -5,6 +5,7 @@ from fastapi.security import HTTPBearer
 
 from app.agent.service import TextToSqlAgentService
 from app.auth import AuthMiddleware
+from app.clients import aclose_all
 from app.config import Settings
 from app.db import build_engine, build_sessionmaker
 from app.models import Base
@@ -25,6 +26,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await conn.run_sync(Base.metadata.create_all)
         yield
         await engine.dispose()
+        # Клиенты внешних API — модульные синглтоны, закрываем их здесь.
+        await aclose_all()
 
     app = FastAPI(title="text2sql-agent-api", lifespan=lifespan)
 
