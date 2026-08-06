@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_session
+from app.deps import SessionDep
 from app.models import ChatMessage
 from app.schemas import HistoryMessage, HistoryRequest, HistoryResponse, MessageType
 
@@ -12,7 +11,7 @@ router = APIRouter(tags=["history"])
 @router.post("/history", response_model=HistoryResponse)
 async def get_history(
     body: HistoryRequest,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> HistoryResponse:
     result = await session.execute(
         select(ChatMessage)

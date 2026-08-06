@@ -56,9 +56,11 @@ uv run pytest
 | Источник | Данные | Пример `entity_id` |
 |---|---|---|
 | `courses` | мок-словарь в модуле источника | `c-101`, `c-202` |
+| `events` | корпоративные мероприятия: `title`, `date`, `location`, `format`, `participants`; мок-словарь в модуле источника | `e-101`, `e-202` |
 
-Живого API курсов нет, поэтому `courses` пока отдаёт данные из словаря
-в `app/enrichment/courses.py`, а не через клиента. Слой клиентов готов и
+Живого API ни для курсов, ни для мероприятий нет, поэтому `courses` и
+`events` пока отдают данные из словарей в `app/enrichment/courses.py` и
+`app/enrichment/events.py`, а не через клиента. Слой клиентов готов и
 покрыт тестами; эталонная обвязка — `app/clients/courses.py::CoursesClient`
 (настройки `COURSES_CLIENT_URL`, `COURSES_CLIENT_TIMEOUT`). Как только
 появится адрес живого API, источник переезжает на клиента: ловит

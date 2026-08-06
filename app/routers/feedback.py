@@ -1,11 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.context import get_person_id
-from app.db import get_session
+from app.deps import SessionDep
 from app.models import ChatMessage, Feedback
 from app.schemas import (
     FeedbackListResponse,
@@ -20,7 +19,7 @@ router = APIRouter(tags=["feedback"])
 @router.post("/feedback")
 async def set_feedback(
     body: FeedbackRequest,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> dict:
     # Оценивать можно только существующее сообщение, и только ответ агента
     chat_message = await session.scalar(
@@ -51,7 +50,7 @@ async def set_feedback(
 @router.get("/feedback", response_model=FeedbackListResponse)
 async def list_feedback(
     chat_id: UUID,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> FeedbackListResponse:
     result = await session.execute(
         select(Feedback).where(Feedback.chat_id == chat_id).order_by(Feedback.id)

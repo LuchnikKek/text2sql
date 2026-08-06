@@ -1,14 +1,12 @@
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from app.agent.service import TextToSqlAgentService
 from app.context import get_person_id
-from app.db import get_session
-from app.deps import get_agent_service
+from app.deps import AgentDep, SessionDep
 from app.models import ChatMessage
 from app.schemas import (
     ChatRequest,
@@ -66,8 +64,8 @@ def _save_message(
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     body: ChatRequest,
-    session: AsyncSession = Depends(get_session),
-    agent: TextToSqlAgentService = Depends(get_agent_service),
+    session: SessionDep,
+    agent: AgentDep,
 ) -> ChatResponse:
     person_id = get_person_id()
     history = await _load_history(session, body.chat_id)
@@ -108,8 +106,8 @@ async def chat(
 async def chat_sse(
     body: ChatRequest,
     request: Request,
-    session: AsyncSession = Depends(get_session),
-    agent: TextToSqlAgentService = Depends(get_agent_service),
+    session: SessionDep,
+    agent: AgentDep,
 ) -> EventSourceResponse:
     person_id = get_person_id()
     history = await _load_history(session, body.chat_id)

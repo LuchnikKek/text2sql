@@ -11,6 +11,7 @@ from app.enrichment import (
     unregister,
 )
 from app.enrichment.courses import CoursesSource
+from app.enrichment.events import EventsSource
 
 
 class BrokenSource:
@@ -91,6 +92,36 @@ async def test_courses_fetch_returns_copy():
     assert (await source.fetch("c-101"))["title"] == "SQL для аналитиков"
 
 
+# --- Источник events -------------------------------------------------------
+
+
+def test_events_source_matches_protocol():
+    assert isinstance(EventsSource(), EnrichmentSource)
+
+
+def test_events_registered_on_import():
+    assert "events" in source_names()
+    assert isinstance(get_source("events"), EventsSource)
+
+
+async def test_events_fetch_returns_data():
+    data = await EventsSource().fetch("e-101")
+    assert data["title"] == "Летний тимбилдинг"
+    assert data["participants"] == 120
+
+
+async def test_events_fetch_unknown_entity_raises():
+    with pytest.raises(EntityNotFound):
+        await EventsSource().fetch("e-000")
+
+
+async def test_events_fetch_returns_copy():
+    source = EventsSource()
+    data = await source.fetch("e-101")
+    data["title"] = "испорчено"
+    assert (await source.fetch("e-101"))["title"] == "Летний тимбилдинг"
+
+
 # --- Эндпоинт --------------------------------------------------------------
 
 
@@ -107,6 +138,27 @@ async def test_enrich_endpoint_returns_source_data(client, auth_headers):
             "tags": ["sql", "window-functions"],
         },
     }
+
+
+async def test_enrich_endpoint_returns_event_data(client, auth_headers):
+    resp = await client.get("/api/v1/enrich/events/e-202", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "source": "events",
+        "entity_id": "e-202",
+        "data": {
+            "title": "Внутренний митап по данным",
+            "date": "2026-09-24",
+            "location": "Zoom",
+            "format": "online",
+            "participants": 45,
+        },
+    }
+
+
+async def test_enrich_unknown_event_returns_404(client, auth_headers):
+    resp = await client.get("/api/v1/enrich/events/e-000", headers=auth_headers)
+    assert resp.status_code == 404
 
 
 async def test_enrich_unknown_source_returns_404(client, auth_headers):
