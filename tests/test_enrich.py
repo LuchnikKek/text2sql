@@ -111,21 +111,27 @@ def test_events_registered_on_import():
 
 
 async def test_events_fetch_returns_data():
-    data = await EventsSource().fetch("e-101")
+    data = await EventsSource().fetch("101")
     assert data["title"] == "Летний тимбилдинг"
     assert data["participants"] == 120
 
 
 async def test_events_fetch_unknown_entity_raises():
     with pytest.raises(EntityNotFound):
-        await EventsSource().fetch("e-000")
+        await EventsSource().fetch("999")
+
+
+async def test_events_fetch_non_numeric_id_raises_not_found():
+    """id мероприятий числовые: нечисловой id — это «не найдено», а не 500."""
+    with pytest.raises(EntityNotFound):
+        await EventsSource().fetch("e-101")
 
 
 async def test_events_fetch_returns_copy():
     source = EventsSource()
-    data = await source.fetch("e-101")
+    data = await source.fetch("101")
     data["title"] = "испорчено"
-    assert (await source.fetch("e-101"))["title"] == "Летний тимбилдинг"
+    assert (await source.fetch("101"))["title"] == "Летний тимбилдинг"
 
 
 # --- Эндпоинт --------------------------------------------------------------
@@ -147,11 +153,11 @@ async def test_enrich_endpoint_returns_source_data(client, auth_headers):
 
 
 async def test_enrich_endpoint_returns_event_data(client, auth_headers):
-    resp = await client.get("/api/v1/enrich/events/e-202", headers=auth_headers)
+    resp = await client.get("/api/v1/enrich/events/202", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json() == {
         "source": "events",
-        "entity_id": "e-202",
+        "entity_id": "202",
         "data": {
             "title": "Внутренний митап по данным",
             "date": "2026-09-24",
@@ -163,7 +169,12 @@ async def test_enrich_endpoint_returns_event_data(client, auth_headers):
 
 
 async def test_enrich_unknown_event_returns_404(client, auth_headers):
-    resp = await client.get("/api/v1/enrich/events/e-000", headers=auth_headers)
+    resp = await client.get("/api/v1/enrich/events/999", headers=auth_headers)
+    assert resp.status_code == 404
+
+
+async def test_enrich_non_numeric_event_id_returns_404(client, auth_headers):
+    resp = await client.get("/api/v1/enrich/events/e-101", headers=auth_headers)
     assert resp.status_code == 404
 
 
