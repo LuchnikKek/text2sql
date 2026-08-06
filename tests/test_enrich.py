@@ -74,22 +74,28 @@ def test_register_and_unregister(broken_source):
 
 
 async def test_courses_fetch_returns_data():
-    data = await CoursesSource().fetch("c-101")
+    data = await CoursesSource().fetch("101")
     assert data["title"] == "SQL для аналитиков"
     assert data["hours"] == 16
 
 
 async def test_courses_fetch_unknown_entity_raises():
     with pytest.raises(EntityNotFound):
-        await CoursesSource().fetch("c-000")
+        await CoursesSource().fetch("999")
+
+
+async def test_courses_fetch_non_numeric_id_raises_not_found():
+    """id курсов числовые: нечисловой id — это «не найдено», а не 500."""
+    with pytest.raises(EntityNotFound):
+        await CoursesSource().fetch("c-101")
 
 
 async def test_courses_fetch_returns_copy():
     """Мутация ответа не должна портить мок-данные источника."""
     source = CoursesSource()
-    data = await source.fetch("c-101")
+    data = await source.fetch("101")
     data["title"] = "испорчено"
-    assert (await source.fetch("c-101"))["title"] == "SQL для аналитиков"
+    assert (await source.fetch("101"))["title"] == "SQL для аналитиков"
 
 
 # --- Источник events -------------------------------------------------------
@@ -126,11 +132,11 @@ async def test_events_fetch_returns_copy():
 
 
 async def test_enrich_endpoint_returns_source_data(client, auth_headers):
-    resp = await client.get("/api/v1/enrich/courses/c-202", headers=auth_headers)
+    resp = await client.get("/api/v1/enrich/courses/202", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json() == {
         "source": "courses",
-        "entity_id": "c-202",
+        "entity_id": "202",
         "data": {
             "title": "Оконные функции на практике",
             "hours": 8,
@@ -162,13 +168,18 @@ async def test_enrich_unknown_event_returns_404(client, auth_headers):
 
 
 async def test_enrich_unknown_source_returns_404(client, auth_headers):
-    resp = await client.get("/api/v1/enrich/unknown/c-101", headers=auth_headers)
+    resp = await client.get("/api/v1/enrich/unknown/101", headers=auth_headers)
     assert resp.status_code == 404
     assert "courses" in resp.json()["detail"]
 
 
 async def test_enrich_unknown_entity_returns_404(client, auth_headers):
-    resp = await client.get("/api/v1/enrich/courses/c-000", headers=auth_headers)
+    resp = await client.get("/api/v1/enrich/courses/999", headers=auth_headers)
+    assert resp.status_code == 404
+
+
+async def test_enrich_non_numeric_course_id_returns_404(client, auth_headers):
+    resp = await client.get("/api/v1/enrich/courses/c-101", headers=auth_headers)
     assert resp.status_code == 404
 
 
@@ -178,5 +189,5 @@ async def test_enrich_source_failure_returns_502(client, auth_headers, broken_so
 
 
 async def test_enrich_requires_auth(client):
-    resp = await client.get("/api/v1/enrich/courses/c-101")
+    resp = await client.get("/api/v1/enrich/courses/101")
     assert resp.status_code == 401

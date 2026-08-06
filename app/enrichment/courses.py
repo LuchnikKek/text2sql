@@ -8,14 +8,14 @@ app/clients/courses.py::CoursesClient).
 from app.enrichment.base import EntityNotFound
 from app.enrichment.registry import register
 
-_COURSES: dict[str, dict] = {
-    "c-101": {
+_COURSES: dict[int, dict] = {
+    101: {
         "title": "SQL для аналитиков",
         "hours": 16,
         "level": "beginner",
         "tags": ["sql", "analytics"],
     },
-    "c-202": {
+    202: {
         "title": "Оконные функции на практике",
         "hours": 8,
         "level": "advanced",
@@ -28,7 +28,13 @@ class CoursesSource:
     name = "courses"
 
     async def fetch(self, entity_id: str) -> dict:
-        course = _COURSES.get(entity_id)
+        # entity_id приходит из пути строкой, а ключи курсов — числа
+        try:
+            course_id = int(entity_id)
+        except ValueError:
+            raise EntityNotFound(f"Course not found: {entity_id}") from None
+
+        course = _COURSES.get(course_id)
         if course is None:
             raise EntityNotFound(f"Course not found: {entity_id}")
         return dict(course)
