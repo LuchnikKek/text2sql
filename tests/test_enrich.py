@@ -1,0 +1,116 @@
+import pytest
+
+from app.enrichment import (
+    EnrichmentError,
+    EnrichmentSource,
+    EntityNotFound,
+    get_source,
+    register,
+    source_names,
+    unregister,
+)
+from app.enrichment.courses import CoursesSource
+
+
+class BrokenSource:
+    """Источник, у которого «отвалилась» внешняя система."""
+
+    name = "broken"
+
+    async def fetch(self, entity_id: str) -> dict:
+        raise EnrichmentError("upstream is down")
+
+
+@pytest.fixture
+def broken_source():
+    register(BrokenSource())
+    yield
+    unregister("broken")
+
+
+# --- Реестр и протокол -----------------------------------------------------
+
+
+def test_courses_source_matches_protocol():
+    assert isinstance(CoursesSource(), EnrichmentSource)
+
+
+def test_courses_registered_on_import():
+    assert "courses" in source_names()
+    assert isinstance(get_source("courses"), CoursesSource)
+
+
+def test_get_unknown_source_returns_none():
+    assert get_source("nope") is None
+
+
+def test_duplicate_registration_rejected():
+    with pytest.raises(ValueError):
+        register(CoursesSource())
+
+
+def test_register_and_unregister(broken_source):
+    assert "broken" in source_names()
+    unregister("broken")
+    assert get_source("broken") is None
+
+
+# --- Источник courses ------------------------------------------------------
+
+
+async def test_courses_fetch_returns_data():
+    data = await CoursesSource().fetch("c-101")
+    assert data["title"] == "SQL для аналитиков"
+    assert data["hours"] == 16
+
+
+async def test_courses_fetch_unknown_entity_raises():
+    with pytest.raises(EntityNotFound):
+        await CoursesSource().fetch("c-000")
+
+
+async def test_courses_fetch_returns_copy():
+    """Мутация ответа не должна портить мок-данные источника."""
+    source = CoursesSource()
+    data = await source.fetch("c-101")
+    data["title"] = "испорчено"
+    assert (await source.fetch("c-101"))["title"] == "SQL для аналитиков"
+
+
+# --- Эндпоинт --------------------------------------------------------------
+
+
+async def test_enrich_endpoint_returns_source_data(client, auth_headers):
+    resp = await client.get("/api/v1/enrich/courses/c-202", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "source": "courses",
+        "entity_id": "c-202",
+        "data": {
+            "title": "Оконные функции на практике",
+            "hours": 8,
+            "level": "advanced",
+            "tags": ["sql", "window-functions"],
+        },
+    }
+
+
+async def test_enrich_unknown_source_returns_404(client, auth_headers):
+    resp = await client.get("/api/v1/enrich/unknown/c-101", headers=auth_headers)
+    assert resp.status_code == 404
+    assert "courses" in resp.json()["detail"]
+
+
+async def test_enrich_unknown_entity_returns_404(client, auth_headers):
+    resp = await client.get("/api/v1/enrich/courses/c-000", headers=auth_headers)
+    assert resp.status_code == 404
+
+
+async def test_enrich_source_failure_returns_502(client, auth_headers, broken_source):
+    resp = await client.get("/api/v1/enrich/broken/whatever", headers=auth_headers)
+    assert resp.status_code == 502
+
+
+async def test_enrich_requires_auth(client):
+    resp = await client.get("/api/v1/enrich/courses/c-101")
+    assert resp.status_code == 401
