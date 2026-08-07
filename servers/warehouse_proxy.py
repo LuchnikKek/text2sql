@@ -32,6 +32,7 @@ def _target_config() -> dict[str, Any]:
                     "CLICKHOUSE_USER": os.getenv("CLICKHOUSE_USER", "text2sql"),
                     "CLICKHOUSE_PASSWORD": os.getenv("CLICKHOUSE_PASSWORD", "text2sql"),
                     "CLICKHOUSE_DATABASE": os.getenv("CLICKHOUSE_DB", "text2sql"),
+                    "CLICKHOUSE_ALLOW_WRITE_ACCESS": "false",
                     "CLICKHOUSE_SECURE": "false",
                     "CLICKHOUSE_VERIFY": "false",
                     "CLICKHOUSE_CONNECT_TIMEOUT": "30",
