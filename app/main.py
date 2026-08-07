@@ -6,10 +6,11 @@ from fastapi.security import HTTPBearer
 from app.agent.service import TextToSqlAgentService
 from app.auth import AuthMiddleware
 from app.clients import aclose_all
+from app.clients.semantic_layer import SemanticLayerClient
 from app.config import Settings
 from app.db import build_engine, build_sessionmaker
 from app.models import Base
-from app.routers import chat, enrich, feedback, history
+from app.routers import chat, debug, enrich, feedback, history
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -35,6 +36,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.engine = engine
     app.state.sessionmaker = sessionmaker
     app.state.agent_service = TextToSqlAgentService()
+    app.state.semantic_layer_client = SemanticLayerClient()
 
     app.add_middleware(
         AuthMiddleware, secret=settings.jwt_secret, algorithm=settings.jwt_algorithm
@@ -55,6 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(history.router, prefix=api, dependencies=secured)
     app.include_router(feedback.router, prefix=api, dependencies=secured)
     app.include_router(enrich.router, prefix=api, dependencies=secured)
+    app.include_router(debug.router, prefix=api, dependencies=secured)
 
     @app.get("/health", tags=["ops"])
     async def health() -> dict:

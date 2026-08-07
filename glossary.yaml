@@ -1,0 +1,56 @@
+# Семантический слой: бизнес-термины -> схема БД.
+# Каждая запись:
+# - term (каноническое имя), synonyms, definition,
+# - mapping:
+# - - для source="clickhouse": table, field, filter — готовое SQL-выражение для WHERE)
+# Опционально: related_enrichment (связанный enrichment-источник),
+# notes (предостережения для агента).
+terms:
+  - term: "блок Финансы"
+    synonyms: ["финблок", "финансовый блок", "финансы"]
+    definition: "Организационный блок компании: бухгалтерия, казначейство и финансовое планирование."
+    mapping:
+      source: "clickhouse"
+      table: "hr.employees"
+      field: "block_name"
+      filter: "block_name = 'Финансы'"
+    notes: "Не путать с департаментом «Финконтроль» — он входит в блок «Риски», а не в «Финансы»."
+
+  - term: "активный сотрудник"
+    synonyms: ["действующий сотрудник", "работающий сотрудник", "не уволен"]
+    definition: "Сотрудник, работающий в компании на текущую дату: принят на работу и не уволен."
+    mapping:
+      source: "clickhouse"
+      table: "hr.employees"
+      field: "termination_date"
+      filter: "termination_date IS NULL AND hire_date <= CURRENT_DATE"
+
+  - term: "в процессе прохождения"
+    synonyms: ["проходит курс", "не завершил обучение", "начал обучение", "in progress"]
+    definition: "Статус назначения курса: сотрудник начал проходить курс, но ещё не завершил его."
+    mapping:
+      source: "clickhouse"
+      table: "learning.assignments"
+      field: "status"
+      filter: "status = 'in_progress'"
+    related_enrichment: "детали курса — enrichment-источник courses по course_id"
+
+  - term: "прошёл курс"
+    synonyms: ["завершил курс", "завершил прохождение", "закончил обучение", "completed"]
+    definition: "Статус назначения курса: сотрудник закончил проходить курс."
+    mapping:
+      source: "clickhouse"
+      table: "learning.assignments"
+      field: "status"
+      filter: "status = 'completed'"
+    related_enrichment: "детали курса — enrichment-источник courses по course_id"
+
+  - term: "просроченное назначение"
+    synonyms: ["просрочка", "просрочил дедлайн", "overdue"]
+    definition: "Назначение курса, которое не завершено к установленному дедлайну."
+    mapping:
+      source: "clickhouse"
+      table: "learning.assignments"
+      field: "due_date"
+      filter: "status <> 'completed' AND due_date < CURRENT_DATE"
+    related_enrichment: "детали курса — enrichment-источник courses по course_id"

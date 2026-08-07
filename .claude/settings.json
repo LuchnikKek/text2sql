@@ -6,13 +6,16 @@
       "Bash(uv run uvicorn:*)",
       "Bash(uv run python:*)",
       "Bash(uv add:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "mcp__semantic-layer__lookup_term",
+      "mcp__semantic-layer__list_terms"
     ],
     "ask": [
       "Bash(git push:*)"
     ],
     "deny": [
       "Read(./.env)",
+      "Read(./glossary.yaml)",
       "Bash(rm -rf:*)"
     ]
   }
