@@ -8,7 +8,8 @@
       "Bash(uv add:*)",
       "Bash(curl:*)",
       "mcp__semantic-layer__lookup_term",
-      "mcp__semantic-layer__list_terms"
+      "mcp__semantic-layer__list_terms",
+      "mcp__warehouse"
     ],
     "ask": [
       "Bash(git push:*)"
@@ -16,7 +17,8 @@
     "deny": [
       "Read(./.env)",
       "Read(./glossary.yaml)",
-      "Bash(rm -rf:*)"
+      "Bash(rm -rf:*)",
+      "mcp__warehouse__list_databases"
     ]
   }
 }

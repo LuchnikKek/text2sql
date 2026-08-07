@@ -8,6 +8,23 @@
         "DATABASE_URL": "${TEXT2SQL_DATABASE_URL}"
       }
     },
+    "warehouse": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["--python", "3.13", "mcp-clickhouse"],
+      "env": {
+        "CLICKHOUSE_HOST": "${CLICKHOUSE_HOST:-localhost}",
+        "CLICKHOUSE_PORT": "${CLICKHOUSE_HTTP_PORT:-8123}",
+        "CLICKHOUSE_USER": "${CLICKHOUSE_USER:-text2sql}",
+        "CLICKHOUSE_PASSWORD": "${CLICKHOUSE_PASSWORD:-text2sql}",
+        "CLICKHOUSE_DATABASE": "${CLICKHOUSE_DB:-text2sql}",
+        "CLICKHOUSE_SECURE": "false",
+        "CLICKHOUSE_VERIFY": "false",
+        "CLICKHOUSE_CONNECT_TIMEOUT": "30",
+        "CLICKHOUSE_SEND_RECEIVE_TIMEOUT": "300",
+        "CHDB_ENABLED": "false"
+      }
+    },
     "semantic-layer": {
       "type": "stdio",
       "command": "uv",
